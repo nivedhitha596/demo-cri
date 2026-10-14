@@ -140,6 +140,9 @@ export default function CategoryPage({
   // Handler for Tier 2 Subcategory Selection
   const handleSelectSubcategory = (subcat: string) => {
     setSelectedSubcat(subcat);
+    if (onCategoryChange) {
+      onCategoryChange(activeCategory, subcat);
+    }
   };
 
   const handleFormSubmit = (e: React.FormEvent) => {
@@ -316,13 +319,24 @@ export default function CategoryPage({
             <span className="text-gray-400">/</span>
             <span className="text-gray-500">Categories</span>
             <span className="text-gray-400">/</span>
-            <span className="text-gray-900 font-bold">
-              {activeCategory === 'all' ? 'All Products' : currentCategoryObj?.name || 'Department'}
-            </span>
+            {selectedSubcat !== 'All' ? (
+              <button
+                type="button"
+                onClick={() => handleSelectSubcategory('All')}
+                className="text-gray-700 hover:text-blue-700 font-bold transition-colors cursor-pointer"
+                title="View all models in this category"
+              >
+                {activeCategory === 'all' ? 'All Products' : currentCategoryObj?.name || 'Department'}
+              </button>
+            ) : (
+              <span className="text-gray-900 font-bold">
+                {activeCategory === 'all' ? 'All Products' : currentCategoryObj?.name || 'Department'}
+              </span>
+            )}
             {selectedSubcat !== 'All' && (
               <>
                 <span className="text-gray-400">/</span>
-                <span className="text-blue-700 font-semibold truncate max-w-[200px]">
+                <span className="text-blue-700 font-bold truncate max-w-[200px]">
                   {selectedSubcat}
                 </span>
               </>
@@ -362,7 +376,7 @@ export default function CategoryPage({
             </span>
             {selectedSubcat !== 'All' && (
               <button
-                onClick={() => setSelectedSubcat('All')}
+                onClick={() => handleSelectSubcategory('All')}
                 className="text-xs text-blue-700 hover:text-blue-900 font-semibold underline cursor-pointer ml-1"
               >
                 Reset to All
@@ -371,11 +385,32 @@ export default function CategoryPage({
           </div>
         </div>
 
+        {/* ACTIVE SUBCATEGORY FILTER CALLOUT */}
+        {selectedSubcat !== 'All' && (
+          <div className="mb-4 p-3 bg-blue-50/90 border border-blue-200 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 animate-fade-in shadow-2xs">
+            <div className="flex items-center gap-2 text-xs flex-wrap">
+              <span className="font-bold text-blue-950">Active Range Filter:</span>
+              <span className="px-2.5 py-1 rounded-md bg-blue-700 text-white font-bold flex items-center gap-1.5 shadow-2xs">
+                <span>{selectedSubcat}</span>
+              </span>
+              <span className="text-blue-700 font-medium">
+                ({sorted.length} {sorted.length === 1 ? 'model' : 'models'} available)
+              </span>
+            </div>
+            <button
+              onClick={() => handleSelectSubcategory('All')}
+              className="text-xs font-bold text-blue-800 hover:text-blue-950 bg-white hover:bg-blue-100 border border-blue-300 px-3 py-1 rounded-lg transition-colors cursor-pointer self-start sm:self-auto"
+            >
+              ← Back to All {currentCategoryObj?.name || ''} Models
+            </button>
+          </div>
+        )}
+
         {/* SUBCATEGORY PILL CHIPS (CLEAN & HORIZONTAL ON CATALOG PAGE) */}
         {tier2Subcategories.length > 0 && (
           <div className="flex items-center gap-1.5 overflow-x-auto whitespace-nowrap pb-2 mb-3.5 scrollbar-none">
             <button
-              onClick={() => setSelectedSubcat('All')}
+              onClick={() => handleSelectSubcategory('All')}
               className={`px-3 py-1 rounded-full text-xs font-semibold transition-all shrink-0 cursor-pointer ${
                 selectedSubcat === 'All'
                   ? 'bg-blue-700 text-white shadow-2xs font-bold'
@@ -390,7 +425,7 @@ export default function CategoryPage({
               return (
                 <button
                   key={sub}
-                  onClick={() => setSelectedSubcat(sub)}
+                  onClick={() => handleSelectSubcategory(sub)}
                   className={`px-3 py-1 rounded-full text-xs font-semibold transition-all shrink-0 cursor-pointer flex items-center gap-1.5 ${
                     isSelected
                       ? 'bg-blue-700 text-white shadow-2xs font-bold'
@@ -408,6 +443,54 @@ export default function CategoryPage({
                 </button>
               );
             })}
+          </div>
+        )}
+
+        {/* SUBCATEGORY EXPLORER CARDS: DISPLAYED WHEN ALL IS SELECTED IN A SPECIFIC CATEGORY */}
+        {selectedSubcat === 'All' && activeCategory !== 'all' && tier2Subcategories.length > 0 && (
+          <div className="mb-6 p-4 rounded-2xl bg-gradient-to-r from-sky-50/70 via-slate-50 to-sky-50/40 border border-sky-100 shadow-2xs animate-fade-in">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <span className="text-base">🗂️</span>
+                <div>
+                  <h2 className="text-xs sm:text-sm font-extrabold text-gray-900 uppercase tracking-wide">
+                    Explore {currentCategoryObj?.name || ''} Pump Ranges
+                  </h2>
+                  <p className="text-[11px] text-gray-500 font-medium">
+                    Click any subcategory below to filter directly to its models
+                  </p>
+                </div>
+              </div>
+              <span className="text-[11px] font-bold text-sky-800 bg-white border border-sky-200 px-2.5 py-1 rounded-full hidden sm:inline">
+                {tier2Subcategories.length} Specialized Ranges
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2.5">
+              {tier2Subcategories.map(sub => {
+                const count = subcatCounts[sub] || 0;
+                return (
+                  <button
+                    key={sub}
+                    onClick={() => handleSelectSubcategory(sub)}
+                    className="p-3 rounded-xl border border-gray-200 bg-white hover:border-sky-500 hover:bg-sky-50/40 hover:shadow-xs transition-all text-left flex flex-col justify-between group cursor-pointer"
+                  >
+                    <div className="flex items-start justify-between gap-1 mb-1.5">
+                      <span className="w-2 h-2 rounded-full bg-sky-500 mt-1 shrink-0 group-hover:scale-125 transition-transform" />
+                      <span className="text-[10px] font-bold text-gray-500 bg-gray-100 group-hover:bg-sky-100 group-hover:text-sky-800 px-1.5 py-0.2 rounded-full transition-colors shrink-0">
+                        {count} {count === 1 ? 'model' : 'models'}
+                      </span>
+                    </div>
+                    <p className="text-xs font-semibold text-gray-800 group-hover:text-sky-950 line-clamp-2 leading-snug">
+                      {sub}
+                    </p>
+                    <span className="mt-2 text-[10px] font-bold text-sky-600 group-hover:text-sky-800 flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+                      View Products →
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         )}
 

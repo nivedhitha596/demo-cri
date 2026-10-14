@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import { SearchIcon, CartIcon, HeartIcon, UserIcon, GlobeIcon, ChevronDownIcon, MenuIcon, CloseIcon, LogoutIcon } from './icons';
-import { categories } from '../data';
+import { useState, useMemo } from 'react';
+import { SearchIcon, CartIcon, HeartIcon, UserIcon, GlobeIcon, ChevronDownIcon, ChevronRightIcon, ArrowLeftIcon, MenuIcon, CloseIcon, LogoutIcon } from './icons';
+import { categories, products, Category } from '../data';
 import { UserProfile } from './AuthModal';
 import AwardBanner from './AwardBanner';
 
@@ -40,7 +40,28 @@ export default function Header({
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [categorySidebarOpen, setCategorySidebarOpen] = useState(false);
-  const [expandedCategory, setExpandedCategory] = useState<string | null>('agri');
+  const [selectedDrawerCategory, setSelectedDrawerCategory] = useState<Category | null>(null);
+  const [subcategorySearch, setSubcategorySearch] = useState('');
+
+  // Subcategory model counts
+  const subcategoryCounts = useMemo(() => {
+    const map: Record<string, number> = {};
+    products.forEach(p => {
+      if (p.subcategory) {
+        map[p.subcategory] = (map[p.subcategory] || 0) + 1;
+      }
+    });
+    return map;
+  }, []);
+
+  // Category model counts
+  const categoryCounts = useMemo(() => {
+    const map: Record<string, number> = {};
+    products.forEach(p => {
+      map[p.category] = (map[p.category] || 0) + 1;
+    });
+    return map;
+  }, []);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -68,7 +89,10 @@ export default function Header({
               {/* SIDE TOGGLE BAR BUTTON */}
               <button
                 type="button"
-                onClick={() => setCategorySidebarOpen(true)}
+                onClick={() => {
+                  setSelectedDrawerCategory(null);
+                  setCategorySidebarOpen(true);
+                }}
                 className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 sm:py-2 bg-sky-50 hover:bg-sky-100 text-sky-950 border border-sky-200 hover:border-sky-300 rounded-xl font-bold text-xs sm:text-sm transition-all shadow-xs cursor-pointer group shrink-0"
                 title="Browse All Categories & Ranges"
                 aria-label="Toggle Categories Sidebar"
@@ -248,144 +272,305 @@ export default function Header({
           {/* Backdrop Overlay */}
           <div
             className="fixed inset-0 bg-black/60 z-[99] backdrop-blur-xs transition-opacity animate-fade-in"
-            onClick={() => setCategorySidebarOpen(false)}
+            onClick={() => {
+              setCategorySidebarOpen(false);
+              setSelectedDrawerCategory(null);
+            }}
           />
 
           {/* Slide-out Sidebar Panel */}
           <aside
-            className="fixed top-0 left-0 bottom-0 w-[300px] sm:w-[380px] bg-white z-[100] shadow-2xl flex flex-col overflow-hidden animate-slide-right"
+            className="fixed top-0 left-0 bottom-0 w-[310px] sm:w-[390px] bg-white z-[100] shadow-2xl flex flex-col overflow-hidden animate-slide-right"
             aria-label="Categories Sidebar Navigation"
           >
-            {/* Drawer Header */}
-            <div className="bg-[#0284c7] text-white p-4 sm:p-5 flex items-center justify-between shadow-md">
-              <div className="flex items-center gap-2.5">
-                <span className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center text-lg">
-                  🗂️
-                </span>
-                <div>
-                  <h2 className="text-sm sm:text-base font-extrabold tracking-wide text-white uppercase">
-                    Product Categories
-                  </h2>
-                  <p className="text-[11px] text-sky-100 font-medium">
-                    C.R.I. Pumps & Engineering Solutions
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => setCategorySidebarOpen(false)}
-                className="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer"
-                aria-label="Close categories sidebar"
-              >
-                <CloseIcon size={20} />
-              </button>
-            </div>
-
-            {/* Quick Actions Shortcuts */}
-            <div className="p-3 bg-slate-50 border-b border-gray-200 flex items-center gap-2">
-              <button
-                onClick={() => {
-                  onCategorySelect('all');
-                  setCategorySidebarOpen(false);
-                }}
-                className="flex-1 py-2 px-3 rounded-lg bg-white hover:bg-sky-50 text-sky-900 border border-gray-200 hover:border-sky-300 text-xs font-bold text-center transition-all shadow-2xs"
-              >
-                ⚡ View All Products
-              </button>
-              <button
-                onClick={() => {
-                  onCategorySelect('agri');
-                  setCategorySidebarOpen(false);
-                }}
-                className="py-2 px-3 rounded-lg bg-amber-400 hover:bg-amber-500 text-gray-950 text-xs font-bold transition-all shadow-2xs"
-              >
-                📜 TN Rate Contract
-              </button>
-            </div>
-
-            {/* Category List with Nested Subcategories Accordion */}
-            <div className="flex-1 overflow-y-auto p-3 space-y-2.5 scrollbar-thin">
-              {categories.map(cat => {
-                const isExpanded = expandedCategory === cat.id;
-                const isActive = activeCategory === cat.id;
-                return (
-                  <div
-                    key={cat.id}
-                    className={`rounded-xl border transition-all overflow-hidden ${
-                      isActive
-                        ? 'border-sky-400 bg-sky-50/50 shadow-xs'
-                        : 'border-gray-200 bg-white hover:border-gray-300'
-                    }`}
+            {/* LEVEL 1: ALL CATEGORIES VIEW */}
+            {!selectedDrawerCategory ? (
+              <>
+                {/* Drawer Header */}
+                <div className="bg-[#0284c7] text-white p-4 sm:p-5 flex items-center justify-between shadow-md">
+                  <div className="flex items-center gap-2.5">
+                    <span className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center text-lg">
+                      🗂️
+                    </span>
+                    <div>
+                      <h2 className="text-sm sm:text-base font-extrabold tracking-wide text-white uppercase">
+                        Product Categories
+                      </h2>
+                      <p className="text-[11px] text-sky-100 font-medium">
+                        C.R.I. Pumps & Engineering Solutions
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setCategorySidebarOpen(false);
+                      setSelectedDrawerCategory(null);
+                    }}
+                    className="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer"
+                    aria-label="Close categories sidebar"
                   >
-                    {/* Category Item Main Row */}
-                    <div className="p-3 flex items-center justify-between gap-2">
+                    <CloseIcon size={20} />
+                  </button>
+                </div>
+
+                {/* Quick Actions Shortcuts */}
+                <div className="p-3 bg-slate-50 border-b border-gray-200 flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      onCategorySelect('all');
+                      setCategorySidebarOpen(false);
+                    }}
+                    className="flex-1 py-2 px-3 rounded-lg bg-white hover:bg-sky-50 text-sky-900 border border-gray-200 hover:border-sky-300 text-xs font-bold text-center transition-all shadow-2xs cursor-pointer"
+                  >
+                    ⚡ View All Products
+                  </button>
+                  <button
+                    onClick={() => {
+                      onCategorySelect('agri');
+                      setCategorySidebarOpen(false);
+                    }}
+                    className="py-2 px-3 rounded-lg bg-amber-400 hover:bg-amber-500 text-gray-950 text-xs font-bold transition-all shadow-2xs cursor-pointer"
+                  >
+                    📜 TN Rate Contract
+                  </button>
+                </div>
+
+                {/* Level 1 Category List Header */}
+                <div className="p-2.5 bg-slate-100/70 border-b border-gray-200 text-[11px] font-bold text-gray-500 uppercase tracking-wider flex items-center justify-between">
+                  <span>Select Category to View Ranges</span>
+                  <span className="text-[10px] bg-white px-2 py-0.5 rounded-full border border-gray-200 text-gray-600 font-semibold">
+                    {categories.length} Departments
+                  </span>
+                </div>
+
+                {/* Level 1 Category List */}
+                <div className="flex-1 overflow-y-auto p-3 space-y-2.5 scrollbar-thin">
+                  {categories.map(cat => {
+                    const isActive = activeCategory === cat.id;
+                    const count = categoryCounts[cat.id] || 0;
+                    return (
                       <button
+                        key={cat.id}
+                        type="button"
                         onClick={() => {
-                          onCategorySelect(cat.id);
-                          setCategorySidebarOpen(false);
+                          setSelectedDrawerCategory(cat);
+                          setSubcategorySearch('');
                         }}
-                        className="flex items-center gap-2.5 text-left flex-1 group/item cursor-pointer"
+                        className={`w-full p-3.5 rounded-xl border text-left transition-all duration-200 flex items-center justify-between gap-3 group cursor-pointer ${
+                          isActive
+                            ? 'border-sky-400 bg-sky-50/70 shadow-xs'
+                            : 'border-gray-200 bg-white hover:border-sky-300 hover:bg-sky-50/30 hover:shadow-xs'
+                        }`}
                       >
-                        <span className="text-2xl shrink-0 group-hover/item:scale-110 transition-transform">
-                          {cat.icon}
-                        </span>
-                        <div>
-                          <p className={`text-xs sm:text-sm font-bold transition-colors ${
-                            isActive ? 'text-sky-900' : 'text-gray-900 group-hover/item:text-sky-700'
-                          }`}>
-                            {cat.name} Pumps
-                          </p>
-                          <p className="text-[10px] text-gray-500 font-medium">
-                            {cat.subcategories.length} ranges available
-                          </p>
+                        <div className="flex items-center gap-3 min-w-0">
+                          <span
+                            className="w-11 h-11 rounded-xl flex items-center justify-center text-2xl shrink-0 group-hover:scale-110 group-hover:rotate-3 transition-transform shadow-2xs"
+                            style={{ background: cat.bgColor || '#f0f9ff' }}
+                          >
+                            {cat.icon}
+                          </span>
+                          <div className="min-w-0">
+                            <p className="text-xs sm:text-sm font-bold text-gray-900 group-hover:text-sky-900 transition-colors truncate">
+                              {cat.name} Pumps
+                            </p>
+                            <div className="flex items-center gap-1.5 mt-0.5">
+                              <span className="text-[11px] text-gray-500 font-medium">
+                                {cat.subcategories.length} ranges available
+                              </span>
+                              {count > 0 && (
+                                <>
+                                  <span className="text-gray-300">•</span>
+                                  <span className="text-[10px] text-sky-700 font-semibold bg-sky-100/70 px-1.5 py-0.2 rounded">
+                                    {count} models
+                                  </span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-1 text-sky-600 shrink-0">
+                          <span className="text-[11px] font-bold text-sky-700 opacity-0 group-hover:opacity-100 transition-opacity hidden sm:inline">
+                            Ranges
+                          </span>
+                          <span className="w-7 h-7 rounded-lg bg-gray-50 group-hover:bg-sky-100 text-gray-400 group-hover:text-sky-700 flex items-center justify-center transition-colors">
+                            <ChevronRightIcon size={16} />
+                          </span>
                         </div>
                       </button>
+                    );
+                  })}
+                </div>
+              </>
+            ) : (
+              /* LEVEL 2: SUBCATEGORIES DRILL-DOWN VIEW */
+              <>
+                {/* Level 2 Navigation Header */}
+                <div className="bg-[#0284c7] text-white p-3.5 sm:p-4 flex items-center justify-between shadow-md">
+                  <button
+                    onClick={() => {
+                      setSelectedDrawerCategory(null);
+                      setSubcategorySearch('');
+                    }}
+                    className="flex items-center gap-1.5 py-1.5 px-2.5 rounded-lg bg-white/15 hover:bg-white/25 text-white text-xs font-bold transition-all cursor-pointer active:scale-95"
+                    title="Return to all categories"
+                  >
+                    <ArrowLeftIcon size={16} />
+                    <span>All Categories</span>
+                  </button>
 
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-extrabold uppercase tracking-wider text-sky-100">
+                      Subcategories
+                    </span>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      setCategorySidebarOpen(false);
+                      setSelectedDrawerCategory(null);
+                    }}
+                    className="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer"
+                    aria-label="Close sidebar"
+                  >
+                    <CloseIcon size={18} />
+                  </button>
+                </div>
+
+                {/* Selected Category Identity Banner */}
+                <div className="p-3.5 sm:p-4 bg-sky-50/80 border-b border-sky-100 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <span
+                      className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl shrink-0 shadow-xs"
+                      style={{ background: selectedDrawerCategory.bgColor || '#e0f2fe' }}
+                    >
+                      {selectedDrawerCategory.icon}
+                    </span>
+                    <div>
+                      <h3 className="text-sm sm:text-base font-extrabold text-gray-900 leading-tight">
+                        {selectedDrawerCategory.name} Pumps
+                      </h3>
+                      <p className="text-[11px] text-gray-500 font-medium">
+                        {selectedDrawerCategory.subcategories.length} product ranges available
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      onCategorySelect(selectedDrawerCategory.id, 'All');
+                      setCategorySidebarOpen(false);
+                      setSelectedDrawerCategory(null);
+                    }}
+                    className="text-[11px] font-bold text-sky-700 hover:text-sky-900 bg-white hover:bg-sky-100 border border-sky-200 px-2.5 py-1.5 rounded-lg transition-all shadow-2xs whitespace-nowrap cursor-pointer"
+                  >
+                    View All →
+                  </button>
+                </div>
+
+                {/* Search / Filter Subcategories (helpful for categories with many ranges like Agri) */}
+                {selectedDrawerCategory.subcategories.length > 6 && (
+                  <div className="p-2.5 bg-slate-50 border-b border-gray-200">
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={subcategorySearch}
+                        onChange={e => setSubcategorySearch(e.target.value)}
+                        placeholder={`Search ${selectedDrawerCategory.name} ranges...`}
+                        className="w-full pl-8 pr-7 py-1.5 text-xs bg-white border border-gray-300 rounded-lg focus:outline-none focus:border-sky-500 text-gray-900"
+                      />
+                      <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs">
+                        🔍
+                      </span>
+                      {subcategorySearch && (
+                        <button
+                          onClick={() => setSubcategorySearch('')}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs cursor-pointer"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Subcategories List: Clicking navigates to products of that subcategory */}
+                <div className="flex-1 overflow-y-auto p-3 space-y-1.5 scrollbar-thin">
+                  {/* Option to view all models of this category */}
+                  <button
+                    onClick={() => {
+                      onCategorySelect(selectedDrawerCategory.id, 'All');
+                      setCategorySidebarOpen(false);
+                      setSelectedDrawerCategory(null);
+                    }}
+                    className="w-full p-2.5 rounded-xl border border-sky-200 bg-sky-50/70 hover:bg-sky-100 text-sky-950 font-bold text-xs flex items-center justify-between transition-all cursor-pointer group shadow-2xs mb-2"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-base">⚡</span>
+                      <span>All {selectedDrawerCategory.name} Models</span>
+                    </div>
+                    <span className="text-sky-700 font-extrabold group-hover:translate-x-0.5 transition-transform">
+                      →
+                    </span>
+                  </button>
+
+                  {selectedDrawerCategory.subcategories
+                    .filter(sub =>
+                      !subcategorySearch.trim() ||
+                      sub.toLowerCase().includes(subcategorySearch.toLowerCase().trim())
+                    )
+                    .map((sub, idx) => {
+                      const count = subcategoryCounts[sub] || 0;
+                      return (
+                        <button
+                          key={sub}
+                          type="button"
+                          onClick={() => {
+                            onCategorySelect(selectedDrawerCategory.id, sub);
+                            setCategorySidebarOpen(false);
+                            setSelectedDrawerCategory(null);
+                          }}
+                          className="w-full p-2.5 sm:p-3 rounded-xl border border-gray-200 bg-white hover:border-sky-400 hover:bg-sky-50/50 transition-all flex items-center justify-between text-left group shadow-2xs hover:shadow-xs cursor-pointer"
+                          style={{ animationDelay: `${idx * 25}ms` }}
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <span className="w-2 h-2 rounded-full bg-sky-500 group-hover:scale-125 transition-transform shrink-0" />
+                            <span className="text-xs sm:text-sm font-semibold text-gray-800 group-hover:text-sky-950 transition-colors line-clamp-1">
+                              {sub}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-2 shrink-0 ml-2">
+                            {count > 0 && (
+                              <span className="text-[10px] font-bold text-gray-600 bg-gray-100 group-hover:bg-sky-100 group-hover:text-sky-800 px-2 py-0.5 rounded-full transition-colors">
+                                {count} {count === 1 ? 'model' : 'models'}
+                              </span>
+                            )}
+                            <span className="text-gray-400 group-hover:text-sky-600 group-hover:translate-x-0.5 transition-all text-xs">
+                              →
+                            </span>
+                          </div>
+                        </button>
+                      );
+                    })}
+
+                  {selectedDrawerCategory.subcategories.filter(sub =>
+                    !subcategorySearch.trim() ||
+                    sub.toLowerCase().includes(subcategorySearch.toLowerCase().trim())
+                  ).length === 0 && (
+                    <div className="text-center py-10 bg-slate-50 rounded-xl border border-gray-200 mt-2">
+                      <p className="text-xs text-gray-500">No ranges matching "{subcategorySearch}"</p>
                       <button
-                        type="button"
-                        onClick={() => setExpandedCategory(prev => prev === cat.id ? null : cat.id)}
-                        className="w-7 h-7 rounded-lg hover:bg-gray-100 flex items-center justify-center text-gray-500 transition-colors cursor-pointer"
-                        title={isExpanded ? 'Collapse subcategories' : 'Expand subcategories'}
+                        onClick={() => setSubcategorySearch('')}
+                        className="text-xs text-sky-600 font-bold underline mt-1 cursor-pointer"
                       >
-                        <span className={`text-[10px] transform transition-transform duration-200 ${
-                          isExpanded ? 'rotate-180' : ''
-                        }`}>
-                          ▼
-                        </span>
+                        Clear search
                       </button>
                     </div>
-
-                    {/* Subcategories Accordion Content */}
-                    {isExpanded && (
-                      <div className="bg-slate-50/80 px-3 py-2 border-t border-gray-100 space-y-1">
-                        <button
-                          onClick={() => {
-                            onCategorySelect(cat.id, 'All');
-                            setCategorySidebarOpen(false);
-                          }}
-                          className="w-full text-left py-1.5 px-2.5 rounded-md text-[11px] font-bold text-sky-700 hover:bg-sky-100 transition-colors flex items-center justify-between"
-                        >
-                          <span>All {cat.name} Models</span>
-                          <span>→</span>
-                        </button>
-                        {cat.subcategories.map(sub => (
-                          <button
-                            key={sub}
-                            onClick={() => {
-                              onCategorySelect(cat.id, sub);
-                              setCategorySidebarOpen(false);
-                            }}
-                            className="w-full text-left py-1.5 px-2.5 rounded-md text-[11px] text-gray-700 hover:text-sky-900 hover:bg-white transition-all font-medium flex items-center gap-1.5 border border-transparent hover:border-gray-200 cursor-pointer"
-                          >
-                            <span className="w-1.5 h-1.5 rounded-full bg-sky-400 shrink-0" />
-                            <span className="truncate">{sub}</span>
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+                  )}
+                </div>
+              </>
+            )}
 
             {/* Drawer Footer */}
             <div className="p-3.5 bg-slate-100 border-t border-gray-200 text-center text-xs text-gray-600">
